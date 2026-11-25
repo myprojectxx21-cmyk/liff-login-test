@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>LIFF Login Test</title>
+  <title>LIFF Connection Test</title>
 
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 
@@ -33,6 +32,12 @@
       background: #06C755;
       color: white;
       cursor: pointer;
+      margin: 10px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
     #status {
@@ -45,8 +50,8 @@
 <body>
 
   <div class="box">
-    <h2>LIFF Login Test</h2>
-    <p>ทดสอบการเข้าสู่ระบบด้วย LINE</p>
+    <h2>LIFF Connection Test</h2>
+    <p>ทดสอบการเชื่อมต่อ LINE กับ Apps Script</p>
 
     <p id="status">กำลังเริ่มต้น LIFF...</p>
 
@@ -55,10 +60,20 @@
     </button>
 
     <div id="profile"></div>
+
+    <button id="sendButton" style="display:none;">
+      ส่งข้อมูลทดสอบ
+    </button>
+
+    <p id="sendStatus"></p>
   </div>
 
   <script>
-    const LIFF_ID = "2012780706-R61ijjrS";
+    const LIFF_ID = "ใส่ LIFF ID เดิมของคุณ";
+
+    const GAS_URL = "ใส่ URL Web App ที่ลงท้ายด้วย exec";
+
+    let userProfile = null;
 
     async function initializeLiff() {
       try {
@@ -68,14 +83,15 @@
           "LIFF เริ่มต้นสำเร็จ";
 
         if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
+          userProfile = await liff.getProfile();
 
           document.getElementById("profile").innerHTML =
             "<p>เข้าสู่ระบบสำเร็จ</p>" +
-            "<p>ชื่อ: " + profile.displayName + "</p>" +
-            "<p>User ID: " + profile.userId + "</p>";
+            "<p>ชื่อ: " + userProfile.displayName + "</p>";
 
-          document.getElementById("loginButton").style.display = "none";
+          document.getElementById("sendButton").style.display =
+            "inline-block";
+
         } else {
           document.getElementById("loginButton").style.display =
             "inline-block";
@@ -84,6 +100,7 @@
       } catch (error) {
         document.getElementById("status").textContent =
           "เกิดข้อผิดพลาด: " + error.message;
+
         console.error(error);
       }
     }
@@ -92,6 +109,50 @@
       .addEventListener("click", function () {
         if (!liff.isInClient() && !liff.isLoggedIn()) {
           liff.login();
+        }
+      });
+
+    document.getElementById("sendButton")
+      .addEventListener("click", async function () {
+
+        if (!userProfile) {
+          document.getElementById("sendStatus").textContent =
+            "ยังไม่มีข้อมูลโปรไฟล์ LINE";
+          return;
+        }
+
+        const button = document.getElementById("sendButton");
+
+        button.disabled = true;
+
+        document.getElementById("sendStatus").textContent =
+          "กำลังส่งข้อมูล...";
+
+        const data = {
+          displayName: userProfile.displayName,
+          userId: userProfile.userId
+        };
+
+        try {
+
+          await fetch(GAS_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {
+              "Content-Type": "text/plain;charset=utf-8"
+            },
+            body: JSON.stringify(data)
+          });
+
+          document.getElementById("sendStatus").textContent =
+            "ส่งคำขอแล้ว กรุณาตรวจสอบ Apps Script Logs";
+
+        } catch (error) {
+
+          document.getElementById("sendStatus").textContent =
+            "เกิดข้อผิดพลาดในการส่ง: " + error.message;
+
+          button.disabled = false;
         }
       });
 
